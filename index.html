@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>自作AIチャット</title>
+
+ <style>
+ * {
+ box-sizing: border-box;
+ }
+
+ body {
+ margin: 0;
+ font-family: sans-serif;
+ background: #f3f4f6;
+ color: #1f2937;
+ }
+
+ .app {
+ width: min(760px, 100%);
+ min-height: 100vh;
+ margin: 0 auto;
+ background: white;
+ display: flex;
+ flex-direction: column;
+ }
+
+ header {
+ padding: 18px;
+ font-size: 20px;
+ font-weight: bold;
+ border-bottom: 1px solid #e5e7eb;
+ }
+
+ #chat {
+ flex: 1;
+ min-height: 55vh;
+ padding: 20px;
+ display: flex;
+ flex-direction: column;
+ gap: 12px;
+ overflow-y: auto;
+ }
+
+ .message {
+ max-width: 80%;
+ padding: 12px 15px;
+ border-radius: 16px;
+ line-height: 1.6;
+ white-space: pre-wrap;
+ }
+
+ .ai {
+ align-self: flex-start;
+ background: #e5e7eb;
+ }
+
+ .user {
+ align-self: flex-end;
+ background: #2563eb;
+ color: white;
+ }
+
+ form {
+ display: flex;
+ gap: 8px;
+ padding: 14px;
+ border-top: 1px solid #e5e7eb;
+ }
+
+ input {
+ flex: 1;
+ padding: 12px 14px;
+ border: 1px solid #cbd5e1;
+ border-radius: 10px;
+ font-size: 16px;
+ }
+
+ button {
+ padding: 12px 16px;
+ border: 0;
+ border-radius: 10px;
+ background: #2563eb;
+ color: white;
+ cursor: pointer;
+ }
+
+ button:hover {
+ background: #1d4ed8;
+ }
+
+ .learn-area {
+ padding: 18px;
+ border-top: 1px solid #e5e7eb;
+ background: #f8fafc;
+ }
+
+ .learn-area h2 {
+ margin: 0 0 12px;
+ font-size: 16px;
+ }
+
+ .learn-area input {
+ width: 100%;
+ margin-bottom: 8px;
+ }
+
+ #learnResult {
+ margin: 8px 0 0;
+ font-size: 14px;
+ }
+ </style>
+</head>
+
+<body>
+ <main class="app">
+ <header>自作AIチャット</header>
+
+ <section id="chat">
+ <div class="message ai">
+ こんにちは。学習した内容をもとに答えるAIです。
+ </div>
+ </section>
+
+ <form id="chatForm">
+ <input
+ id="userInput"
+ type="text"
+ placeholder="メッセージを入力"
+ autocomplete="off"
+ />
+ <button type="submit">送信</button>
+ </form>
+
+ <section class="learn-area">
+ <h2>AIに学習させる</h2>
+
+ <input id="questionInput" type="text" placeholder="覚えさせる質問" />
+ <input id="answerInput" type="text" placeholder="その質問への答え" />
+
+ <button id="learnButton">学習する</button>
+ <p id="learnResult"></p>
+ </section>
+ </main>
+
+ <script>
+ const chat = document.getElementById("chat");
+ const chatForm = document.getElementById("chatForm");
+ const userInput = document.getElementById("userInput");
+
+ const questionInput = document.getElementById("questionInput");
+ const answerInput = document.getElementById("answerInput");
+ const learnButton = document.getElementById("learnButton");
+ const learnResult = document.getElementById("learnResult");
+
+ function addMessage(text, sender) {
+ const message = document.createElement("div");
+ message.className = `message ${sender}`;
+ message.textContent = text;
+
+ chat.appendChild(message);
+ chat.scrollTop = chat.scrollHeight;
+ }
+
+ chatForm.addEventListener("submit", async (event) => {
+ event.preventDefault();
+
+ const message = userInput.value.trim();
+ if (!message) return;
+
+ addMessage(message, "user");
+ userInput.value = "";
+
+ try {
+ const response = await fetch("/api/chat", {
+ method: "POST",
+ headers: {
+ "Content-Type": "application/json"
+ },
+ body: JSON.stringify({ message })
+ });
+
+ const data = await response.json();
+ addMessage(data.reply, "ai");
+
+ } catch (error) {
+ addMessage("サーバーに接続できませんでした。", "ai");
+ }
+ });
+
+ learnButton.addEventListener("click", async () => {
+ const question = questionInput.value.trim();
+ const answer = answerInput.value.trim();
+
+ if (!question || !answer) {
+ learnResult.textContent = "質問と答えを両方入力してください。";
+ return;
+ }
+
+ try {
+ const response = await fetch("/api/learn", {
+ method: "POST",
+ headers: {
+ "Content-Type": "application/json"
+ },
+ body: JSON.stringify({
+ question,
+ answer
+ })
+ });
+
+ const data = await response.json();
+
+ learnResult.textContent = data.message;
+ questionInput.value = "";
+ answerInput.value = "";
+
+ } catch (error) {
+ learnResult.textContent = "学習データを保存できませんでした。";
+ }
+ });
+ </script>
+</body>
+</html>
